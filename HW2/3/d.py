@@ -1,0 +1,46 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import cv2, glob
+from a import import_images
+
+def adaptive_gaussian_thresholding(img, block, const):
+    row = np.ceil(img.shape[0] / block).astype(int)
+    col = np.ceil(img.shape[1] / block).astype(int)
+
+    gaussian_filter = np.zeros((block, block))
+    sigma = block // 6
+    b = block // 2
+    for x in range(-b, b):
+        for y in range(-b, b):
+            x1 = np.sqrt(2 * np.pi * (sigma ** 2))
+            x2 = np.exp(-(x ** 2 + y ** 2) / (2 * sigma ** 2))
+            gaussian_filter[x + b - 1, y + b - 1] = (1 / x1) * x2
+
+    for i in range(row):
+        for j in range(col):
+
+            x = [i * block, (i + 1) * block]
+            y = [j * block, (j + 1) * block]
+
+            if x[1] > img.shape[0]:
+                x[1] = img.shape[0]
+            if y[1] > img.shape[1]:
+                y[1] = img.shape[1]
+
+            gauss_part = gaussian_filter[0:(x[1] - x[0]), 0:(y[1] - y[0])]
+            sub_img = img[x[0]:x[1], y[0]:y[1]]
+
+            thresh = np.sum(np.multiply(sub_img, gauss_part))/np.sum(gauss_part) - const
+            sub_img[sub_img >= thresh] = 255
+            sub_img[sub_img != 255] = 0
+    return img
+
+
+images = import_images()
+params = [[10,20],[10,20],[10,20],[40,30]]
+for i in range(len(images)):
+    block,const = params[i]
+    thr_image = adaptive_gaussian_thresholding(images[i],block,const)
+    plt.imshow(thr_image, cmap='gray')
+    plt.title(f"block_size={block}, const={const}")
+    plt.show()
